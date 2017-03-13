@@ -9,13 +9,13 @@ const uint8_t out = A1;
 const int led[4] = { 2,3,4,5 };
 
 //Dipswitches for what to write on the wire
-const int dip[4] = { 9,8,7,6 };
+const int dip[4] = { 12,8,7,6 };
 
 const unsigned long syncTime = 15; //ms, ulong is same as Arduino libraries use for time.
 const unsigned long bitTime = 9; //ms
 
 //Bit on which we start reading
-const int readStart = 0;
+const int readStart = 92;
 //Bit on which we start writing
 const int writeStart = 4;
 //Amount of bits to read and write
@@ -72,14 +72,20 @@ ISR(PCINT1_vect) {
 	if (digitalRead(in) == HIGH && NewTime - time >= 12) {
 		edgeCount = 0;
 		time = NewTime;
-		return;
+		//return;
 	}
 
 	//We are in our range of bits to read luckily
 	if (edgeCount/2 >= readStart && edgeCount/2 < readStart + messageLength) {
+		//Serial.print("Reading wire");
+		//Serial.println(edgeCount);
 		if (digitalRead(in) == LOW) {
 			//Write to the subindex of the read bit where the LED is
-			digitalWrite(led[edgeCount/2 - readStart], (NewTime - time) > 4);
+			digitalWrite(led[edgeCount/2 - readStart], !((NewTime - time) > 4));
+			//Serial.print("Current edge:");
+			//Serial.println(edgeCount / 2 - readStart);
+			//Serial.print("State:");
+			//Serial.println((NewTime - time) > 4);
 			edgeCount++;
 			time = NewTime;
 			return;
@@ -88,9 +94,13 @@ ISR(PCINT1_vect) {
 
 	//We are in our write range
 	if (edgeCount/2 >= writeStart && edgeCount/2 < writeStart + messageLength) {
+		//Serial.print("Writing wire");
+		//Serial.println(edgeCount);
 		if (digitalRead(in) == HIGH) {
 			//If the dip isn't high we really don't care for writing on the wire.
-			if (digitalRead(dip[edgeCount - writeStart]) == HIGH) {
+			Serial.print("Interested in state of digital");
+			Serial.println(edgeCount / 2 - writeStart);
+			if (digitalRead(dip[edgeCount/2 - writeStart]) == LOW) {
 				unsigned long writeDuration = NewTime;
 				//while (millis() - writeDuration < (bitTime / 4) * 3) {
 				//	Serial.print("Line start value:");
